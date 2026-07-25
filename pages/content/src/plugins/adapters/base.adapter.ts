@@ -4,6 +4,7 @@ import type {
   AdapterCapability, 
   DetectedTool 
 } from '../plugin-types';
+import { PageController } from '@page-agent/page-controller';
 
 /**
  * BaseAdapterPlugin provides a foundational class for all adapter plugins.
@@ -18,6 +19,9 @@ export abstract class BaseAdapterPlugin implements AdapterPlugin {
   protected context!: PluginContext;
   protected currentStatus: 'pending' | 'initializing' | 'active' | 'inactive' | 'error' | 'disabled' = 'pending';
 
+  // PageController instance for advanced DOM operations (W3C events, Slate.js support, etc.)
+  protected pageController: PageController | null = null;
+
   constructor() {
     // Constructor can be used for initial setup common to all plugins derived from BaseAdapterPlugin
     // but before context is available.
@@ -27,6 +31,14 @@ export abstract class BaseAdapterPlugin implements AdapterPlugin {
     this.context = context;
     this.currentStatus = 'initializing';
     this.context.logger.debug(`Initializing (Base)`);
+    // Initialize PageController with mask disabled (adapters handle their own UI)
+    try {
+      this.pageController = new PageController({ enableMask: false });
+      this.context.logger.debug('PageController initialized successfully');
+    } catch (error) {
+      this.context.logger.warn('Failed to initialize PageController, falling back to manual DOM operations:', error);
+      this.pageController = null;
+    }
     // Basic initialization logic common to all plugins
     // Specific plugins should override this and call super.initialize(context) if needed.
     this.currentStatus = 'inactive'; // Default to inactive after base initialization
@@ -48,6 +60,15 @@ export abstract class BaseAdapterPlugin implements AdapterPlugin {
 
   async cleanup(): Promise<void> {
     this.context.logger.debug(`Cleaning up (Base)`);
+    // Clean up PageController resources
+    if (this.pageController) {
+      try {
+        this.pageController.dispose();
+        this.pageController = null;
+      } catch (error) {
+        this.context.logger.warn('Error disposing PageController:', error);
+      }
+    }
     // Basic cleanup logic
     // Specific plugins should override this and call super.cleanup() if needed.
     this.currentStatus = 'disabled'; // Or 'pending' if it can be reinitialized
@@ -62,6 +83,52 @@ export abstract class BaseAdapterPlugin implements AdapterPlugin {
   async submitForm(options?: { formElement?: HTMLFormElement }): Promise<boolean> {
     this.context.logger.warn('submitForm not implemented by this adapter.');
     return false;
+  }
+
+  // ======= PageController-based helper methods =======
+
+  /**
+   * Input text into an element by CSS selector using PageController.
+   * Provides W3C standard event simulation and rich text editor support (Slate.js, React, etc.)
+   * Subclasses can call this from their insertText() implementation.
+   */
+  protected async inputBySelector(selector: string, text: string): Promise<boolean> {
+    if (!this.pageController) {
+      this.context.logger.warn('PageController not available, cannot use inputBySelector');
+      return false;
+    }
+    try {
+      const result = await this.pageController.inputBySelector(selector, text);
+      if (!result.success) {
+        this.context.logger.warn(`inputBySelector failed: ${result.message}`);
+      }
+      return result.success;
+    } catch (error) {
+      this.context.logger.error('inputBySelector error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Click an element by CSS selector using PageController.
+   * Provides W3C standard click event simulation (pointerover → mousedown → click).
+   * Subclasses can call this from their submitForm() implementation.
+   */
+  protected async clickBySelector(selector: string): Promise<boolean> {
+    if (!this.pageController) {
+      this.context.logger.warn('PageController not available, cannot use clickBySelector');
+      return false;
+    }
+    try {
+      const result = await this.pageController.clickBySelector(selector);
+      if (!result.success) {
+        this.context.logger.warn(`clickBySelector failed: ${result.message}`);
+      }
+      return result.success;
+    } catch (error) {
+      this.context.logger.error('clickBySelector error:', error);
+      return false;
+    }
   }
 
   async attachFile(file: File, options?: { inputElement?: HTMLInputElement }): Promise<boolean> {

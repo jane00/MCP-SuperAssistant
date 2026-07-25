@@ -47,6 +47,8 @@ const manifest = {
     '*://*.kimi.com/*',
     '*://*.chat.z.ai/*',
     '*://*.chat.qwen.ai/*',
+    '*://*.qianwen.com/*',
+    '*://*.tongyi.com/*',
 
   ],
 
@@ -159,6 +161,12 @@ const manifest = {
     },
     {
       matches: ['*://*.chat.qwen.ai/*'],
+      js: ['content/index.iife.js'],
+      run_at: 'document_idle',
+    },
+    // Specific content script for qianwen.com / tongyi.com
+    {
+      matches: ['*://*.qianwen.com/*', '*://*.tongyi.com/*'],
       js: ['content/index.iife.js'],
       run_at: 'document_idle',
     },

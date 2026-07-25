@@ -262,6 +262,12 @@ importers:
         specifier: ^4.19.2
         version: 4.19.3
 
+  packages/page-controller:
+    dependencies:
+      ai-motion:
+        specifier: ^0.4.8
+        version: 0.4.8
+
   packages/shared:
     devDependencies:
       '@extension/storage':
@@ -342,6 +348,9 @@ importers:
       '@extension/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@page-agent/page-controller':
+        specifier: workspace:*
+        version: link:../../packages/page-controller
       '@radix-ui/react-dialog':
         specifier: ^1.1.6
         version: 1.1.6(@types/react-dom@19.0.4(@types/react@19.0.12))(@types/react@19.0.12)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -1915,6 +1924,9 @@ packages:
     resolution: {integrity: sha512-OvQ/2pUDKmgfCg++xsTX1wGxfTaszcHVcTctW4UJB4hibJx2HXxxO5UmVgyjMa+ZDsiaf5wWLXYpRWMmBI0QHg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+
+  ai-motion@0.4.8:
+    resolution: {integrity: sha512-9nQVjf8lrYQWSW0sZdb9bES4x8Ei1w9C0S62po2KvRbMjslmjm0WMeszyW771SEauDnu4YGWqurLZ/gCkCTosQ==}
 
   ajv-formats@2.1.1:
     resolution: {integrity: sha512-Wx0Kx52hxE7C18hkMEggYlEifqWZtYaRgouJor+WMdPnQyEK13vgEWyVNup7SoeeoLMsr4kf5h6dOW11I15MUA==}
@@ -5978,6 +5990,8 @@ snapshots:
       acorn: 8.14.1
 
   acorn@8.14.1: {}
+
+  ai-motion@0.4.8: {}
 
   ajv-formats@2.1.1(ajv@8.17.1):
     optionalDependencies:

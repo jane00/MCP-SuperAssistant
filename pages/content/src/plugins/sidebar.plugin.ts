@@ -262,6 +262,7 @@ export class SidebarPlugin implements AdapterPlugin {
     if (hostname.includes('x.ai') || hostname.includes('grok')) return 'grok';
     if (hostname.includes('gemini.google.com')) return 'gemini';
     if (hostname.includes('z.ai')) return 'zai';
+    if (hostname.includes('qianwen.com') || hostname.includes('tongyi.com')) return 'perplexity';
     if (hostname.includes('aistudio.google.com')) return 'aistudio';
     if (hostname.includes('openrouter.ai')) return 'openrouter';
     if (hostname.includes('chat.deepseek.com')) return 'deepseek';

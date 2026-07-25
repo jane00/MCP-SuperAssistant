@@ -29,6 +29,7 @@ import { ChatGPTAdapter } from './adapters/chatgpt.adapter';
 import { KimiAdapter } from './adapters/kimi.adapter';
 import { ZAdapter } from './adapters/z.adapter';
 import { QwenAdapter } from './adapters/qwenchat.adapter';
+import { QianwenAdapter } from './adapters/qianwen.adapter';
 import { RemoteConfigPlugin } from './remote-config.plugin';
 
 
@@ -998,6 +999,28 @@ class PluginRegistry {
           name: 'Qwen Adapter',
           description: 'Specialized adapter for Qwen AI with chat input, form submission, and file attachment support',
           version: '2.0.0',
+          enabled: true,
+          priority: 5,
+          settings: {
+            logLevel: 'info',
+            urlCheckInterval: 1000,
+          },
+        },
+      });
+
+      // Register QianwenAdapter factory for Qianwen (qianwen.com/tongyi.com)
+      this.registerAdapterFactory({
+        name: 'qianwen-adapter',
+        version: '1.0.0',
+        type: 'website-adapter',
+        hostnames: ['qianwen.com', 'tongyi.com'],
+        capabilities: ['text-insertion', 'form-submission', 'file-attachment', 'dom-manipulation'],
+        create: () => new QianwenAdapter(),
+        config: {
+          id: 'qianwen-adapter',
+          name: 'Qianwen Adapter',
+          description: 'Specialized adapter for Qianwen (qianwen.com/tongyi.com) with Slate.js editor support via PageController',
+          version: '1.0.0',
           enabled: true,
           priority: 5,
           settings: {

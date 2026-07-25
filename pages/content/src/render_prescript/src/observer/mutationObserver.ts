@@ -173,6 +173,51 @@ export const checkForUnprocessedFunctionCalls = (): number => {
         processedCount++;
         monitorNode(element, blockId);
       }
+    } else if (processedElements.has(element)) {
+      // Recovery: Check if previously processed element is stuck in loading state
+      // This happens when streaming end signal is missed (common on z.ai, qianwen.com)
+      const existingBlock = element.nextElementSibling?.classList.contains('function-block') 
+        ? element.nextElementSibling as HTMLElement
+        : element.parentElement?.querySelector('.function-block') as HTMLElement;
+      
+      if (existingBlock && existingBlock.classList.contains('function-loading') && !existingBlock.hasAttribute('data-recovering')) {
+        // Check if no streaming is active in this block
+        const stillStreaming = existingBlock.querySelector('[data-streaming="true"]');
+        if (!stillStreaming) {
+          if (CONFIG.debug) logger.debug(`[Scan] RECOVERY: Block stuck in loading, re-rendering to force completion`);
+          existingBlock.setAttribute('data-recovering', 'true');
+          // Re-render will trigger force-complete detection in functionBlock.ts
+          const result = renderFunctionCall(element as HTMLPreElement, { current: false });
+          if (result) {
+            processedCount++;
+          }
+          // Remove recovering flag after delay
+          setTimeout(() => existingBlock.removeAttribute('data-recovering'), 3000);
+        }
+      } else if (existingBlock && existingBlock.classList.contains('function-complete')) {
+        // Check if buttons are missing on completed block (React re-render removed them)
+        const hasButtons = existingBlock.querySelector('.execute-button') && existingBlock.querySelector('.raw-toggle');
+        if (!hasButtons && !existingBlock.hasAttribute('data-recovering')) {
+          if (CONFIG.debug) logger.debug(`[Scan] RECOVERY: Completed block missing buttons, re-rendering`);
+          existingBlock.setAttribute('data-recovering', 'true');
+          processedElements.delete(element);
+          const blockId = element.getAttribute('data-block-id');
+          if (blockId) {
+            renderedFunctionBlocks.delete(blockId);
+          }
+          // Remove old block
+          if (existingBlock.parentElement) {
+            existingBlock.parentElement.removeChild(existingBlock);
+          }
+          const result = renderFunctionCall(element as HTMLPreElement, { current: false });
+          if (result) {
+            processedCount++;
+            const newBlockId = blockId || `block-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+            monitorNode(element, newBlockId);
+          }
+          setTimeout(() => existingBlock.removeAttribute('data-recovering'), 3000);
+        }
+      }
     }
   }
 
@@ -318,7 +363,22 @@ export const startDirectMonitoring = (): void => {
     characterDataOldValue: true, // Keep old values for comparison
   });
 
-  if (CONFIG.debug) logger.debug('Direct monitoring started for function calls');
+  // Set up periodic scan as fallback to recover missing buttons
+  // This catches cases where React re-renders remove our injected buttons
+  // or where streaming end signal was missed
+  if (updateThrottleTimer) {
+    clearInterval(updateThrottleTimer);
+  }
+  updateThrottleTimer = setInterval(() => {
+    if (!isProcessing) {
+      const recoveredCount = checkForUnprocessedFunctionCalls();
+      if (recoveredCount > 0 && CONFIG.debug) {
+        logger.debug(`Periodic scan recovered ${recoveredCount} function blocks`);
+      }
+    }
+  }, 5000); // Check every 5 seconds
+
+  if (CONFIG.debug) logger.debug('Direct monitoring started for function calls with periodic recovery scan');
 };
 
 /**

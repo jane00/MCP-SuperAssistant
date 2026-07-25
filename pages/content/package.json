@@ -36,7 +36,8 @@
     "shadcn-ui": "^0.9.5",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
-    "zustand": "^5.0.5"
+    "zustand": "^5.0.5",
+    "@page-agent/page-controller": "workspace:*"
   },
   "devDependencies": {
     "@extension/hmr": "workspace:*",

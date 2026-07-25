@@ -580,8 +580,11 @@ export const smoothlyUpdateBlockContent = (
  * @param rawContent Raw XML content containing the function call
  */
 export const addExecuteButton = (blockDiv: HTMLDivElement, rawContent: string): void => {
+  console.log('[MCP-Debug] addExecuteButton called, rawContent length:', rawContent.length);
+  
   // Check for existing execute button to avoid duplicates
   if (blockDiv.querySelector('.execute-button')) {
+    console.log('[MCP-Debug] addExecuteButton: execute button already exists, skipping');
     return;
   }
 
@@ -631,20 +634,37 @@ export const addExecuteButton = (blockDiv: HTMLDivElement, rawContent: string): 
     callId = callIdMatch?.[2] || `call-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   }
 
-  // If we couldn't extract a function name, don't add the button
-  if (!functionName) {
+  // If we couldn't extract a function name, try to get it from existing block
+  let effectiveFunctionName = functionName;
+  if (!effectiveFunctionName) {
+    // Try to find function name from existing rendered block
+    const existingBlock = blockDiv.closest('.function-block');
+    if (existingBlock) {
+      const nameElement = existingBlock.querySelector('.function-name-text');
+      if (nameElement && nameElement.textContent) {
+        effectiveFunctionName = nameElement.textContent.trim();
+        console.log('[MCP-Debug] addExecuteButton: Recovered functionName from existing block: ' + effectiveFunctionName);
+      }
+    }
+  }
+
+  // If we still couldn't extract a function name, don't add the button
+  if (!effectiveFunctionName) {
+    console.log('[MCP-Debug] addExecuteButton: No function name found, skipping button');
     if (CONFIG.debug) {
       logger.debug('[Execute Button] No function name found, skipping button');
     }
     return;
   }
+  
+  console.log('[MCP-Debug] addExecuteButton: functionName=' + effectiveFunctionName + ', isJSON=' + isJSON);
 
   if (CONFIG.debug) {
-    logger.debug('[Execute Button] Creating button for:', functionName, 'with params:', Object.keys(parameters));
+    logger.debug('[Execute Button] Creating button for:', effectiveFunctionName, 'with params:', Object.keys(parameters));
   }
 
   // Generate content signature for this function call
-  const contentSignature = generateContentSignature(functionName, parameters);
+  const contentSignature = generateContentSignature(effectiveFunctionName, parameters);
 
   // Use DocumentFragment for efficient DOM construction
   const fragment = document.createDocumentFragment();
@@ -744,7 +764,7 @@ export const addExecuteButton = (blockDiv: HTMLDivElement, rawContent: string): 
         return;
       }
 
-      logger.debug(`Executing function ${functionName}, call_id: ${callId} with arguments:`, parameters);
+      logger.debug(`Executing function ${effectiveFunctionName}, call_id: ${callId} with arguments:`, parameters);
 
       // Show results panel and loading indicator
       resultsPanel.style.display = 'block';
@@ -753,13 +773,13 @@ export const addExecuteButton = (blockDiv: HTMLDivElement, rawContent: string): 
 
       // Call tool using the new mcpClient async API
       try {
-        const result = await mcpClient.callTool(functionName, parameters);
+        const result = await mcpClient.callTool(effectiveFunctionName, parameters);
 
         resetButtonState();
         displayResult(resultsPanel, loadingIndicator, true, result);
 
         // Store execution and update history efficiently
-        const executionData = storeExecutedFunction(functionName, callId, parameters, contentSignature);
+        const executionData = storeExecutedFunction(effectiveFunctionName, callId, parameters, contentSignature);
         const historyPanel = (blockDiv.querySelector('.function-history-panel') ||
           createHistoryPanel(blockDiv, callId, contentSignature)) as HTMLDivElement;
 
@@ -803,6 +823,8 @@ export const addExecuteButton = (blockDiv: HTMLDivElement, rawContent: string): 
   // Batch DOM operations
   fragment.appendChild(executeButton);
   blockDiv.appendChild(fragment);
+  
+  console.log('[MCP-Debug] addExecuteButton: Button inserted into DOM, blockDiv has button: ' + !!blockDiv.querySelector('.execute-button'));
 
   // Efficiently determine target parent
   const targetParent = blockDiv.classList.contains('function-buttons')
@@ -812,7 +834,7 @@ export const addExecuteButton = (blockDiv: HTMLDivElement, rawContent: string): 
   targetParent.appendChild(resultsPanel);
 
   // Check for previous executions efficiently
-  checkAndDisplayFunctionHistory(blockDiv, functionName, callId, contentSignature);
+  checkAndDisplayFunctionHistory(blockDiv, effectiveFunctionName, callId, contentSignature);
 };
 
 /**

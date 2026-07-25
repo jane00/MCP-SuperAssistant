@@ -204,6 +204,22 @@ export const WEBSITE_CONFIGS: Array<{
         useCodeMirrorExtraction: true
       },
     },
+    {
+      urlPattern: 'qianwen.com',
+      config: {
+        targetSelectors: ['pre', 'code'],
+        streamingContainerSelectors: ['pre', 'code'],
+        function_result_selector: ['div[data-testid="user-message"]', 'div.user-message-content'],
+      },
+    },
+    {
+      urlPattern: 'tongyi.com',
+      config: {
+        targetSelectors: ['pre', 'code'],
+        streamingContainerSelectors: ['pre', 'code'],
+        function_result_selector: ['div[data-testid="user-message"]', 'div.user-message-content'],
+      },
+    },
     // Add more website-specific configurations as needed
     // Example:
     // {

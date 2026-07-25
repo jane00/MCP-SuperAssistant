@@ -1222,8 +1222,19 @@ export const renderFunctionCall = (block: HTMLPreElement, isProcessingRef: { cur
 
   const existingFunctionBlock = document.querySelector(`.function-block[data-block-id="${blockId}"]`);
   if (existingFunctionBlock && existingFunctionBlock.classList.contains('function-complete')) {
-    if (CONFIG.debug) logger.debug(`Skipping render for completed block ${blockId}`);
-    return false;
+    // Block is already complete with buttons rendered
+    // Only re-render if buttons are missing (e.g. removed by React re-render)
+    const hasButtons = existingFunctionBlock.querySelector('.execute-button') && existingFunctionBlock.querySelector('.raw-toggle');
+    if (hasButtons) {
+      if (CONFIG.debug) logger.debug(`Skipping render for completed block ${blockId} (buttons present)`);
+      return false;
+    } else {
+      if (CONFIG.debug) logger.debug(`Completed block ${blockId} missing buttons, allowing re-render`);
+      // Remove the complete flag to allow re-rendering
+      existingFunctionBlock.classList.remove('function-complete');
+      // Also remove from processedElements to allow full re-processing
+      processedElements.delete(block);
+    }
   }
 
   const preExistingIncompleteBlocks = (window as any).preExistingIncompleteBlocks || new Set<string>();
@@ -1490,7 +1501,24 @@ export const renderFunctionCall = (block: HTMLPreElement, isProcessingRef: { cur
   }
 
   // Add buttons for complete functions
-  if (functionInfo.isComplete) {
+  // Force complete detection: if content contains closing tags but isComplete is false,
+  // it means the stream ended but the detection missed it (common on z.ai, qianwen.com)
+  const hasClosingTags = isJSONFormat 
+    ? (rawContent.includes('"type": "function_call_end"') || rawContent.trim().endsWith('}'))
+    : (rawContent.includes('</parameter>') && rawContent.includes('</invoke>') && rawContent.includes('</function_calls>'));
+  
+  const isActuallyComplete = functionInfo.isComplete || hasClosingTags;
+  
+  if (isActuallyComplete) {
+    // Mark as complete if it wasn't already
+    if (!functionInfo.isComplete) {
+      if (CONFIG.debug) logger.debug(`[Render] Force-marking block ${blockId} as complete (closing tags detected)`);
+      blockDiv.classList.remove('function-loading');
+      blockDiv.classList.add('function-complete');
+      const spinner = blockDiv.querySelector('.spinner');
+      if (spinner) spinner.remove();
+    }
+    
     if (!blockDiv.querySelector('.raw-toggle')) {
       addRawXmlToggle(buttonContainer!, rawContent);
     }
